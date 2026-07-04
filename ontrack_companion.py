@@ -944,18 +944,20 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 <script>
-  // Staleness guard: if this page hasn't been refreshed by the NAS in over a
-  // day, the scheduled task may be failing (often an expired token). Say so.
+  // Staleness guard: with 30-min scheduled runs (plus GitHub's occasional
+  // delay), anything past ~2 hours means something's actually broken -
+  // most likely the OnTrack token expired and needs a fresh bookmarklet click.
   (function(){{
     var built = {updated_epoch} * 1000;
     var ageH = (Date.now() - built) / 3600000;
-    if (ageH > 26) {{
+    if (ageH > 2) {{
       var el = document.getElementById('stale');
       el.className = 'stale show';
-      el.innerHTML = '\u26a0\ufe0f This dashboard is ' + Math.round(ageH) +
-        ' hours old. The scheduled refresh on your NAS may be failing \u2014 ' +
-        'most likely your OnTrack token expired. Check your email for an alert, ' +
-        'or refresh the token (see the README).';
+      el.innerHTML = '\u26a0\ufe0f This dashboard is ' + Math.round(ageH * 10) / 10 +
+        ' hours old, but should update every 30 minutes. Most likely your ' +
+        'OnTrack token expired - click your "Update OnTrack Token" bookmark ' +
+        'while logged into OnTrack, then check the Actions tab on GitHub for ' +
+        'the next run.';
     }}
   }})();
 
