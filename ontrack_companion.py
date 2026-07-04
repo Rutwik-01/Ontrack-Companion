@@ -1185,7 +1185,9 @@ def cmd_dashboard(cfg, units=None, tasks=None):
     render_dashboard(units, tasks, out, current_units=current_units)
     print("Dashboard written to %s (%d tasks)" % (out, len(tasks)))
 
-    if cfg.has_section("github") and cfg.get("github", "repo_name", fallback="").strip():
+    has_explicit_repo = cfg.get("github", "repo_name", fallback="").strip()
+    has_actions_repo = "/" in os.environ.get("GITHUB_REPOSITORY", "")
+    if cfg.has_section("github") and (has_explicit_repo or has_actions_repo):
         try:
             gh = GitHubAPI(cfg)
             with open(out, "rb") as f:
