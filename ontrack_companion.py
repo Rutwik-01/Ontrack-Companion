@@ -1099,8 +1099,9 @@ def send_auth_alert(cfg, detail):
     prefix = cfg.get("email", "subject_prefix", fallback="OnTrack")
     subject = prefix + " \u26a0\ufe0f can't reach your account \u2014 refresh token"
     steps = ('1. Log in to https://ontrack.deakin.edu.au in your browser.\n'
-             '2. Grab a fresh token (README \u2192 "Getting your token", or the bookmarklet).\n'
-             '3. On the NAS run:  python3 ontrack_companion.py settoken "<paste token>"')
+             '2. Click your "Update OnTrack Token" bookmark, then click on any '
+             'unit or task in OnTrack to trigger it.\n'
+             '3. It syncs into your dashboard on the next scheduled run.')
     text = ("OnTrack Companion couldn't log in.\n\n%s\n\n"
             "Your session token has most likely expired, so reminders and the "
             "dashboard are paused until you refresh it:\n\n%s\n" % (detail, steps))
@@ -1113,8 +1114,9 @@ def send_auth_alert(cfg, detail):
         'To get reminders flowing again:</p>'
         '<ol style="font-size:14px;line-height:1.6;padding-left:20px">'
         '<li>Log in to <a href="https://ontrack.deakin.edu.au">OnTrack</a> in your browser.</li>'
-        '<li>Grab a fresh token (bookmarklet or README steps).</li>'
-        '<li>On the NAS: <code>python3 ontrack_companion.py settoken "&lt;token&gt;"</code></li>'
+        '<li>Click your "Update OnTrack Token" bookmark, then click on any unit or task '
+        'in OnTrack to trigger it.</li>'
+        '<li>It syncs into your dashboard on the next scheduled run.</li>'
         '</ol></div>' % detail
     )
     try:
@@ -1415,8 +1417,8 @@ def main():
             msg += ("\nAn alert email was sent to you." if alerted else
                     "\n(No alert email sent - check the dashboard's stale banner instead, "
                     "or set send_auth_alert_email=true in config.ini to re-enable this.)")
-            msg += ('\nRefresh it:  python3 ontrack_companion.py settoken "<new token>"'
-                    '   (see README).')
+            msg += ('\nRefresh it: click your "Update OnTrack Token" bookmark while logged '
+                    'into OnTrack, then click on any unit/task to trigger it.')
             sys.exit(msg)
         sys.exit("HTTP error %d from OnTrack: %s" % (e.code, e.reason))
     except URLError as e:
