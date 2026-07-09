@@ -1133,13 +1133,82 @@ def send_auth_alert(cfg, detail):
 # Commands
 # ---------------------------------------------------------------------------
 
+def load_manual_tasks(cfg):
+    """Load units/tasks you've entered by hand for anything OnTrack doesn't
+    know about (a non-Deakin unit, something not yet added to OnTrack, etc).
+
+    Reads a JSON file that's just a normal file in your repo - edited the
+    same way you already edit config.ini, through GitHub's own web editor.
+    Missing file, blank file, or a JSON typo all fail SAFELY (empty result,
+    a printed warning) rather than breaking the whole run - a mistake in
+    this file should never be able to take down your real OnTrack data.
+    """
+    path = cfg.get("dashboard", "manual_tasks_path", fallback="manual_tasks.json")
+    full_path = path if os.path.isabs(path) else os.path.join(HERE, path)
+    if not os.path.exists(full_path):
+        return [], []
+
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            raw = f.read().strip()
+        if not raw:
+            return [], []
+        data = json.loads(raw)
+    except Exception as e:
+        print("Could not read %s (ignoring manual tasks this run): %s" % (path, e))
+        return [], []
+
+    units = []
+    for u in data.get("units", []):
+        if not isinstance(u, dict) or not u.get("code"):
+            continue
+        units.append({"code": u["code"], "name": u.get("name", ""),
+                      "target_grade": u.get("target_grade")})
+
+    tasks = []
+    valid_statuses = set(STATUS_LABELS.keys())
+    for t in data.get("tasks", []):
+        if not isinstance(t, dict) or not t.get("unit_code") or not t.get("abbr"):
+            print("Skipping a manual task entry missing unit_code/abbr: %r" % t)
+            continue
+        status = t.get("status", "not_started")
+        if status not in valid_statuses:
+            print("Manual task '%s' has unrecognized status '%s' - using 'not_started'. "
+                  "Valid values: %s" % (t.get("abbr"), status, ", ".join(sorted(valid_statuses))))
+            status = "not_started"
+        tasks.append({
+            "unit_code": t["unit_code"],
+            "abbr": t["abbr"],
+            "name": t.get("name", t["abbr"]),
+            "status": status,
+            "start_date": parse_date(t.get("start_date")),
+            "due_date": parse_date(t.get("due_date")),
+            "weight": t.get("weight"),
+            "comments": [],  # manual tasks have no OnTrack marker feedback
+        })
+
+    return units, tasks
+
+
 def gather(cfg):
     """Single place that decides whether to pull comment text, so 'all' does
     one data pass and shares it between the dashboard and the reminder email."""
     sync_token_from_gist(cfg)
     api = OnTrack(cfg)
     fetch_comments = cfg.getboolean("dashboard", "fetch_comments", fallback=True)
-    return collect_tasks(api, fetch_comments=fetch_comments)
+    units, tasks = collect_tasks(api, fetch_comments=fetch_comments)
+
+    manual_units, manual_tasks = load_manual_tasks(cfg)
+    if manual_units or manual_tasks:
+        existing_codes = {u["code"] for u in units}
+        for u in manual_units:
+            if u["code"] not in existing_codes:
+                units.append(u)
+                existing_codes.add(u["code"])
+        tasks.extend(manual_tasks)
+        print("Added %d manual unit(s), %d manual task(s)." % (len(manual_units), len(manual_tasks)))
+
+    return units, tasks
 
 
 def cmd_test(cfg):
