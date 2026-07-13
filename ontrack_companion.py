@@ -806,8 +806,8 @@ def render_dashboard(units, tasks, out_path, current_units=None):
 
     if current_codes:
         filters_html = (
-            '<button class="chip" data-filter="%s">Current</button>'
-            '<button class="chip active" data-filter="all">All</button>'
+            '<button class="chip active" data-filter="%s">Current</button>'
+            '<button class="chip" data-filter="all">All</button>'
             % ",".join(current_codes)
         )
     else:
